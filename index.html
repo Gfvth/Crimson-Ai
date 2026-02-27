@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Crimson AI</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { gray: { 850: '#1f2937', 900: '#111827', 950: '#030712' } } } }
+        }
+    </script>
+
+    <style>
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        .markdown-body pre { background: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 0.5rem; }
+        .markdown-body code { background: rgba(128,128,128,0.2); padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: monospace; }
+        .markdown-body pre code { background: transparent; padding: 0; }
+        
+        /* Smooth glowing logo animation for thinking state */
+        .thinking-glow { animation: pulse-glow 1.5s infinite alternate; }
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 5px rgba(217, 70, 239, 0.4); transform: scale(0.95); }
+            100% { box-shadow: 0 0 15px rgba(217, 70, 239, 0.8); transform: scale(1.05); }
+        }
+        
+        .typing-cursor::after { content: '▋'; animation: blink 1s step-start infinite; color: #d946ef; }
+        @keyframes blink { 50% { opacity: 0; } }
+        body { margin: 0; padding: 0; overscroll-behavior-y: none; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    </style>
+</head>
+<body class="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen flex overflow-hidden">
+
+    <div id="loading" class="fixed inset-0 z-[9999] bg-white dark:bg-gray-900 flex flex-col items-center justify-center">
+        <img src="crimson-logo.jpg" alt="Logo" class="w-16 h-16 rounded-full border border-fuchsia-200 animate-pulse mb-4" onerror="this.style.display='none'">
+        <div class="text-lg font-medium text-fuchsia-600">Starting Crimson AI...</div>
+    </div>
+
+    <div id="app" class="flex w-full h-[100dvh] hidden relative">
+        
+        <aside id="sidebar" class="fixed lg:relative inset-y-0 left-0 z-40 w-72 bg-gray-50 dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-transform duration-300 transform -translate-x-full lg:translate-x-0 h-full">
+            <div class="p-4 flex gap-2 shrink-0">
+                <button onclick="createNewChat()" class="flex-1 bg-fuchsia-600 hover:bg-fuchsia-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm">
+                    + New Chat
+                </button>
+                <button onclick="toggleSidebar()" class="lg:hidden p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg">✕</button>
+            </div>
+            
+            <div id="chat-list" class="flex-1 overflow-y-auto p-3 space-y-1"></div>
+            
+            <div class="p-4 border-t border-gray-200 dark:border-gray-800 shrink-0">
+                <button onclick="openSettings()" class="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors font-medium">
+                    ⚙ Settings & Configuration
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col h-[100dvh] min-w-0 bg-white dark:bg-gray-900 relative">
+            
+            <header class="h-14 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur z-20 shrink-0">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <button onclick="toggleSidebar()" class="lg:hidden p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">☰</button>
+                    
+                    <div class="flex items-center gap-2">
+                        <img src="crimson-logo.jpg" alt="Crimson Logo" class="w-8 h-8 rounded-full border border-fuchsia-200 dark:border-fuchsia-800 object-cover" onerror="this.style.display='none'">
+                        <h1 id="ui-ai-name" class="font-bold text-lg text-fuchsia-600 dark:text-fuchsia-500">Crimson AI</h1>
+                    </div>
+                    
+                    <span class="text-gray-300 dark:text-gray-700 mx-1">|</span>
+                    <h2 id="current-chat-title" class="font-medium text-sm text-gray-500 truncate">New Chat</h2>
+                </div>
+                <button onclick="toggleDarkMode()" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">🌓</button>
+            </header>
+
+            <div class="flex-1 relative overflow-y-auto pb-32" id="scroll-area">
+                <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500 pointer-events-none">
+                    <img src="crimson-logo.jpg" alt="Logo" class="w-20 h-20 rounded-full mb-4 opacity-40 shadow-lg shadow-fuchsia-500/10 object-cover" onerror="this.style.display='none'">
+                    <p id="greeting-text" class="text-xl font-semibold mb-2">How can Crimson AI help you today?</p>
+                </div>
+                <div id="messages-container" class="p-4 sm:p-6 space-y-6 relative z-10 flex flex-col"></div>
+            </div>
+
+            <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white dark:from-gray-900 dark:via-gray-900 to-transparent z-20">
+                <div class="max-w-3xl mx-auto flex items-end gap-2 bg-white dark:bg-gray-850 border border-gray-300 dark:border-gray-700 rounded-2xl p-2 shadow-lg focus-within:ring-2 focus-within:ring-fuchsia-500 transition-all">
+                    <textarea id="message-input" rows="1" class="w-full max-h-40 bg-transparent text-gray-900 dark:text-gray-100 p-2 text-sm sm:text-base outline-none resize-none" placeholder="Message Crimson AI..." oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight, 160)+'px'" onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
+                    <button id="send-btn" onclick="sendMessage()" class="bg-fuchsia-600 hover:bg-fuchsia-700 text-white p-2.5 rounded-xl transition-colors disabled:opacity-50 shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="settings-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                <h2 class="text-lg font-bold">App Settings</h2>
+                <button onclick="closeSettings()" class="text-gray-500 hover:text-gray-900 dark:hover:text-white">✕</button>
+            </div>
+            <div class="p-6 space-y-4 overflow-y-auto">
+                <div>
+                    <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">AI Name</label>
+                    <input type="text" id="set-ainame" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-fuchsia-500" value="Crimson AI">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">System Instructions (Rules)</label>
+                    <textarea id="set-system" rows="4" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-fuchsia-500 text-sm resize-none"></textarea>
+                </div>
+                <hr class="border-gray-200 dark:border-gray-800">
+                <div>
+                    <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">OpenRouter API Key</label>
+                    <input type="password" id="set-key" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-fuchsia-500" placeholder="sk-or-v1-...">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">Model Name</label>
+                    <input type="text" id="set-model" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-fuchsia-500" value="deepseek/deepseek-r1:free">
+                </div>
+            </div>
+            <div class="p-4 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-2">
+                <button onclick="closeSettings()" class="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg">Cancel</button>
+                <button onclick="saveSettings()" class="bg-fuchsia-600 hover:bg-fuchsia-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIG WITH CLEAN SYSTEM PROMPT
+        let state = {
+            apiKey: '',
+            model: 'deepseek/deepseek-r1:free',
+            aiName: 'Crimson AI',
+            systemPrompt: 'You are Crimson AI, an elite and highly advanced AI assistant. Your emblem is the crimson lotus. You specialize in software architecture, mobile app development, Python, and cybersecurity analysis. Provide precise, clean, and highly optimized code solutions. Be direct, exceptionally helpful, and professional in all interactions.',
+            theme: 'light',
+            chats: [],
+            currentId: null,
+            isGenerating: false
+        };
+
+        const STORAGE_KEY = 'crimson_clean_v1';
+
+        function loadData() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    Object.assign(state, parsed);
+                }
+            } catch (err) {}
+        }
+
+        function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            applyTheme();
+            updateUINames();
+            if (state.chats.length === 0) createNewChat();
+            else loadChat(state.chats[0].id);
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('app').classList.remove('hidden');
+        });
+
+        function applyTheme() { document.documentElement.classList.toggle('dark', state.theme === 'dark'); }
+        function toggleDarkMode() { state.theme = state.theme === 'dark' ? 'light' : 'dark'; applyTheme(); saveData(); }
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('-translate-x-full'); }
+
+        function updateUINames() {
+            document.title = state.aiName;
+            document.getElementById('ui-ai-name').innerText = state.aiName;
+            document.getElementById('greeting-text').innerText = `How can ${state.aiName} help you today?`;
+            document.getElementById('message-input').placeholder = `Message ${state.aiName}...`;
+        }
+
+        function openSettings() {
+            document.getElementById('set-key').value = state.apiKey;
+            document.getElementById('set-model').value = state.model;
+            document.getElementById('set-ainame').value = state.aiName;
+            document.getElementById('set-system').value = state.systemPrompt;
+            document.getElementById('settings-modal').classList.replace('hidden', 'flex');
+        }
+
+        function closeSettings() { document.getElementById('settings-modal').classList.replace('flex', 'hidden'); }
+
+        function saveSettings() {
+            state.apiKey = document.getElementById('set-key').value.trim();
+            state.model = document.getElementById('set-model').value.trim();
+            state.aiName = document.getElementById('set-ainame').value.trim() || 'Crimson AI';
+            state.systemPrompt = document.getElementById('set-system').value.trim();
+            saveData(); updateUINames(); closeSettings();
+        }
+
+        function createNewChat() {
+            const id = 'chat_' + Date.now();
+            state.chats.unshift({ id, title: 'New Chat', messages: [] });
+            saveData(); loadChat(id); renderSidebar();
+        }
+
+        function loadChat(id) {
+            state.currentId = id;
+            const chat = state.chats.find(c => c.id === id);
+            document.getElementById('current-chat-title').innerText = chat.title;
+            const container = document.getElementById('messages-container');
+            container.innerHTML = '';
+            document.getElementById('empty-state').style.display = chat.messages.length ? 'none' : 'flex';
+            chat.messages.forEach(m => appendUI(m.role, m.content));
+            renderSidebar();
+        }
+
+        function renderSidebar() {
+            const list = document.getElementById('chat-list');
+            list.innerHTML = '';
+            state.chats.forEach(chat => {
+                const active = chat.id === state.currentId;
+                const div = document.createElement('div');
+                div.className = `p-3 text-sm rounded-lg cursor-pointer truncate transition-colors ${active ? 'bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-400 font-semibold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800'}`;
+                div.innerText = chat.title;
+                div.onclick = () => { loadChat(chat.id); if(window.innerWidth < 1024) toggleSidebar(); };
+                list.appendChild(div);
+            });
+        }
+
+        function appendUI(role, content, isThinking = false) {
+            document.getElementById('empty-state').style.display = 'none';
+            const container = document.getElementById('messages-container');
+            const wrap = document.createElement('div');
+            wrap.className = `flex w-full flex-col ${role === 'user' ? 'items-end' : 'items-start'}`;
+            
+            if(role === 'assistant') {
+                const lbl = document.createElement('span');
+                lbl.className = 'text-xs font-bold text-fuchsia-600 dark:text-fuchsia-400 mb-1 ml-1 flex items-center gap-2';
+                lbl.innerHTML = `<img src="crimson-logo.jpg" class="w-4 h-4 rounded-full object-cover" onerror="this.style.display='none'">${state.aiName}`;
+                wrap.appendChild(lbl);
+            }
+
+            const bub = document.createElement('div');
+            bub.className = `max-w-[90%] sm:max-w-[80%] px-4 py-3 rounded-2xl ${role === 'user' ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-br-sm' : 'bg-transparent text-gray-900 dark:text-gray-100 markdown-body border border-gray-100 dark:border-gray-800 shadow-sm'}`;
+            
+            if (role === 'user') bub.innerText = content;
+            else if (isThinking) {
+                // CLEAN THINKING STATE
+                bub.innerHTML = `<div class="flex items-center gap-3">
+                    <img src="crimson-logo.jpg" class="w-8 h-8 rounded-full thinking-glow object-cover border border-fuchsia-200 dark:border-fuchsia-800" alt="...">
+                    <span class="text-sm text-fuchsia-600 dark:text-fuchsia-400 font-medium animate-pulse">Processing...</span>
+                </div>`;
+            } else {
+                bub.innerHTML = typeof marked !== 'undefined' ? marked.parse(content || '') : content;
+            }
+            
+            wrap.appendChild(bub);
+            container.appendChild(wrap);
+            document.getElementById('scroll-area').scrollTop = document.getElementById('scroll-area').scrollHeight;
+            return bub;
+        }
+
+        async function sendMessage() {
+            if (state.isGenerating) return;
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text) return;
+            
+            if (!state.apiKey) { alert("Please add your API Key in Settings."); openSettings(); return; }
+
+            input.value = ''; input.style.height = 'auto'; document.getElementById('send-btn').disabled = true;
+            const chat = state.chats.find(c => c.id === state.currentId);
+            
+            if (chat.messages.length === 0) { 
+                chat.title = text.substring(0, 25) + (text.length > 25 ? '...' : ''); 
+                renderSidebar(); document.getElementById('current-chat-title').innerText = chat.title; 
+            }
+
+            chat.messages.push({ role: 'user', content: text });
+            appendUI('user', text);
+            state.isGenerating = true;
+            const aiBub = appendUI('assistant', '', true);
+            let full = ''; let started = false;
+
+            try {
+                const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.apiKey}` },
+                    body: JSON.stringify({ model: state.model, messages: [{ role: 'system', content: state.systemPrompt }, ...chat.messages], stream: true })
+                });
+
+                if (!res.ok) throw new Error("API Connection Failed");
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const lines = decoder.decode(value).split('\n');
+                    for (const l of lines) {
+                        if (l.startsWith('data: ') && !l.includes('[DONE]')) {
+                            try {
+                                const delta = JSON.parse(l.replace('data: ', '')).choices[0].delta.content;
+                                if (delta) {
+                                    if (!started) { aiBub.innerHTML = ''; aiBub.classList.add('typing-cursor'); started = true; }
+                                    full += delta;
+                                    aiBub.innerHTML = marked.parse(full);
+                                    document.getElementById('scroll-area').scrollTop = document.getElementById('scroll-area').scrollHeight;
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+                chat.messages.push({ role: 'assistant', content: full }); saveData();
+            } catch (err) { aiBub.innerHTML = `<span class="text-red-500 font-medium text-sm">Connection error. Please check your API key and network.</span>`; 
+            } finally { aiBub.classList.remove('typing-cursor'); state.isGenerating = false; document.getElementById('send-btn').disabled = false; setTimeout(() => input.focus(), 50); }
+        }
+    </script>
+</body>
+</html>
