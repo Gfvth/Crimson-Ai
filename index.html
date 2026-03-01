@@ -1,320 +1,1167 @@
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Crimson AI</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>Crimson AI · Universal App Controller</title>
+  <!-- Tailwind · light/dark compatible -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Markdown + syntax highlight + sanitizer -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <style>
+    body { margin: 0; background: #f9fafb; }
+    .dark body { background: #111827; }
+    #loading { display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; }
+    .sidebar-transition { transition: transform 0.2s ease; }
+    .prose pre { background: #f0f0f0; padding: 0.75rem; border-radius: 0.5rem; overflow-x: auto; }
+    .dark .prose pre { background: #1e1e2e; }
+    .prose code { font-family: monospace; }
+    .message-actions { opacity: 0; transition: opacity 0.2s; }
+    .message-group:hover .message-actions { opacity: 1; }
+    .typing-dots::after { content: '...'; animation: dots 1.5s steps(4, end) infinite; width: 0; display: inline-block; }
+    @keyframes dots { 0%, 20% { content: ''; } 40% { content: '.'; } 60% { content: '..'; } 80%, 100% { content: '...'; } }
     
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: { extend: { colors: { gray: { 850: '#1f2937', 900: '#111827', 950: '#030712' } } } }
-        }
-    </script>
+    /* Crimson Logo */
+.crimson-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
 
-    <style>
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; }
-        .dark ::-webkit-scrollbar-thumb { background: #475569; }
-        .markdown-body pre { background: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 0.5rem; }
-        .markdown-body code { background: rgba(128,128,128,0.2); padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: monospace; }
-        .markdown-body pre code { background: transparent; padding: 0; }
-        
-        /* Smooth glowing logo animation for thinking state */
-        .thinking-glow { animation: pulse-glow 1.5s infinite alternate; }
-        @keyframes pulse-glow {
-            0% { box-shadow: 0 0 5px rgba(217, 70, 239, 0.4); transform: scale(0.95); }
-            100% { box-shadow: 0 0 15px rgba(217, 70, 239, 0.8); transform: scale(1.05); }
-        }
-        
-        .typing-cursor::after { content: '▋'; animation: blink 1s step-start infinite; color: #d946ef; }
-        @keyframes blink { 50% { opacity: 0; } }
-        /* Prevent bounce on mobile and force strict viewport height */
-        body { margin: 0; padding: 0; overscroll-behavior-y: none; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-    </style>
+/* Thinking / Processing Logo */
+.thinking-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  animation: rotateLogo 3s linear infinite;
+}
+
+/* Smooth Rotation */
+@keyframes rotateLogo {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+    
+    /* Welcome message - simple and clean */
+    .welcome-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      text-align: center;
+      padding: 2rem;
+    }
+    
+    .welcome-title {
+      font-size: 2rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 1rem;
+    }
+    
+    .welcome-text {
+      font-size: 1.25rem;
+      color: #6b7280;
+      font-weight: 400;
+      max-width: 600px;
+      line-height: 1.6;
+    }
+    .dark .welcome-text {
+      color: #9ca3af;
+    }
+    
+    /* Clean typing indicator */
+    .typing-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .app-button {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0.25rem;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .app-button:hover {
+      transform: scale(1.05);
+    }
+    .install-prompt {
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      color: white;
+      padding: 1rem;
+      border-radius: 1rem;
+      margin: 0.5rem 0;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.9; }
+    }
+  </style>
 </head>
-<body class="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 h-[100dvh] flex overflow-hidden">
+<body class="antialiased">
 
-    <div id="loading" class="fixed inset-0 z-[9999] bg-white dark:bg-gray-900 flex flex-col items-center justify-center">
-        <img src="crimson-logo.jpg" alt="Logo" class="w-16 h-16 rounded-full border border-fuchsia-200 animate-pulse mb-4" onerror="this.style.display='none'">
-        <div class="text-lg font-medium text-fuchsia-600">Starting Crimson AI...</div>
-    </div>
+  <div id="loading" class="text-gray-600 dark:text-gray-300">Loading Crimson AI...</div>
+  <div id="app" class="hidden"></div>
 
-    <div id="app" class="flex w-full h-full hidden relative">
-        
-        <aside id="sidebar" class="fixed lg:relative inset-y-0 left-0 z-40 w-72 bg-gray-50 dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-transform duration-300 transform -translate-x-full lg:translate-x-0 h-full">
-            <div class="p-4 flex gap-2 shrink-0">
-                <button onclick="createNewChat()" class="flex-1 bg-fuchsia-600 hover:bg-fuchsia-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm">
-                    + New Chat
+  <script>
+    (function() {
+      'use strict';
+
+      const loadingEl = document.getElementById('loading');
+      const appEl = document.getElementById('app');
+
+      const STORAGE_KEYS = {
+        API_KEY: 'crimson_apiKey',
+        MODEL: 'crimson_model',
+        CHATS: 'crimson_chats',
+        DARK_MODE: 'crimson_darkMode',
+      };
+      const DEFAULT_MODEL = 'deepseek/deepseek-r1:free';
+      const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
+
+      // Complete app database with package names, URLs, and install links
+      const APP_DATABASE = {
+        'whatsapp': {
+          name: 'WhatsApp',
+          package: 'com.whatsapp',
+          urlScheme: 'whatsapp://',
+          webUrl: 'https://web.whatsapp.com',
+          playStore: 'https://play.google.com/store/apps/details?id=com.whatsapp',
+          appStore: 'https://apps.apple.com/app/id310633997',
+          icon: '📱'
+        },
+        'youtube': {
+          name: 'YouTube',
+          package: 'com.google.android.youtube',
+          urlScheme: 'vnd.youtube://',
+          webUrl: 'https://youtube.com',
+          playStore: 'https://play.google.com/store/apps/details?id=com.google.android.youtube',
+          appStore: 'https://apps.apple.com/app/id544007664',
+          icon: '▶️'
+        },
+        'instagram': {
+          name: 'Instagram',
+          package: 'com.instagram.android',
+          urlScheme: 'instagram://',
+          webUrl: 'https://instagram.com',
+          playStore: 'https://play.google.com/store/apps/details?id=com.instagram.android',
+          appStore: 'https://apps.apple.com/app/id389801252',
+          icon: '📷'
+        },
+        'facebook': {
+          name: 'Facebook',
+          package: 'com.facebook.katana',
+          urlScheme: 'fb://',
+          webUrl: 'https://facebook.com',
+          playStore: 'https://play.google.com/store/apps/details?id=com.facebook.katana',
+          appStore: 'https://apps.apple.com/app/id284882215',
+          icon: '👤'
+        },
+        'twitter': {
+          name: 'Twitter/X',
+          package: 'com.twitter.android',
+          urlScheme: 'twitter://',
+          webUrl: 'https://twitter.com',
+          playStore: 'https://play.google.com/store/apps/details?id=com.twitter.android',
+          appStore: 'https://apps.apple.com/app/id333903271',
+          icon: '🐦'
+        },
+        'tiktok': {
+          name: 'TikTok',
+          package: 'com.zhiliaoapp.musically',
+          urlScheme: 'snssdk1233://',
+          webUrl: 'https://tiktok.com',
+          playStore: 'https://play.google.com/store/apps/details?id=com.zhiliaoapp.musically',
+          appStore: 'https://apps.apple.com/app/id835599320',
+          icon: '🎵'
+        },
+        'snapchat': {
+          name: 'Snapchat',
+          package: 'com.snapchat.android',
+          urlScheme: 'snapchat://',
+          webUrl: 'https://snapchat.com',
+          playStore: 'https://play.google.com/store/apps/details?id=com.snapchat.android',
+          appStore: 'https://apps.apple.com/app/id447188370',
+          icon: '👻'
+        },
+        'telegram': {
+          name: 'Telegram',
+          package: 'org.telegram.messenger',
+          urlScheme: 'tg://',
+          webUrl: 'https://web.telegram.org',
+          playStore: 'https://play.google.com/store/apps/details?id=org.telegram.messenger',
+          appStore: 'https://apps.apple.com/app/id686449807',
+          icon: '✈️'
+        },
+        'spotify': {
+          name: 'Spotify',
+          package: 'com.spotify.music',
+          urlScheme: 'spotify://',
+          webUrl: 'https://open.spotify.com',
+          playStore: 'https://play.google.com/store/apps/details?id=com.spotify.music',
+          appStore: 'https://apps.apple.com/app/id324684580',
+          icon: '🎧'
+        },
+        'netflix': {
+          name: 'Netflix',
+          package: 'com.netflix.mediaclient',
+          urlScheme: 'netflix://',
+          webUrl: 'https://netflix.com',
+          playStore: 'https://play.google.com/store/apps/details?id=com.netflix.mediaclient',
+          appStore: 'https://apps.apple.com/app/id363590051',
+          icon: '🎬'
+        },
+        'chrome': {
+          name: 'Chrome',
+          package: 'com.android.chrome',
+          urlScheme: 'googlechrome://',
+          webUrl: 'https://google.com',
+          playStore: 'https://play.google.com/store/apps/details?id=com.android.chrome',
+          appStore: 'https://apps.apple.com/app/id535886823',
+          icon: '🌐'
+        },
+        'gmail': {
+          name: 'Gmail',
+          package: 'com.google.android.gm',
+          urlScheme: 'googlegmail://',
+          webUrl: 'https://mail.google.com',
+          playStore: 'https://play.google.com/store/apps/details?id=com.google.android.gm',
+          appStore: 'https://apps.apple.com/app/id422689480',
+          icon: '📧'
+        },
+        'maps': {
+          name: 'Google Maps',
+          package: 'com.google.android.apps.maps',
+          urlScheme: 'comgooglemaps://',
+          webUrl: 'https://maps.google.com',
+          playStore: 'https://play.google.com/store/apps/details?id=com.google.android.apps.maps',
+          appStore: 'https://apps.apple.com/app/id585027354',
+          icon: '🗺️'
+        },
+        'photos': {
+          name: 'Google Photos',
+          package: 'com.google.android.apps.photos',
+          urlScheme: 'googlephotos://',
+          webUrl: 'https://photos.google.com',
+          playStore: 'https://play.google.com/store/apps/details?id=com.google.android.apps.photos',
+          appStore: 'https://apps.apple.com/app/id962194608',
+          icon: '🖼️'
+        },
+        'drive': {
+          name: 'Google Drive',
+          package: 'com.google.android.apps.docs',
+          urlScheme: 'googledrive://',
+          webUrl: 'https://drive.google.com',
+          playStore: 'https://play.google.com/store/apps/details?id=com.google.android.apps.docs',
+          appStore: 'https://apps.apple.com/app/id507874739',
+          icon: '📁'
+        },
+        'calendar': {
+          name: 'Google Calendar',
+          package: 'com.google.android.calendar',
+          urlScheme: 'googlecalendar://',
+          webUrl: 'https://calendar.google.com',
+          playStore: 'https://play.google.com/store/apps/details?id=com.google.android.calendar',
+          appStore: 'https://apps.apple.com/app/id909319292',
+          icon: '📅'
+        },
+        'contacts': {
+          name: 'Contacts',
+          package: 'com.google.android.contacts',
+          urlScheme: 'content://com.android.contacts/',
+          webUrl: 'https://contacts.google.com',
+          playStore: 'https://play.google.com/store/apps/details?id=com.google.android.contacts',
+          icon: '👥'
+        },
+        'phone': {
+          name: 'Phone',
+          package: 'com.android.dialer',
+          urlScheme: 'tel:',
+          webUrl: null,
+          icon: '📞'
+        },
+        'messages': {
+          name: 'Messages',
+          package: 'com.android.messaging',
+          urlScheme: 'sms:',
+          webUrl: null,
+          icon: '💬'
+        },
+        'camera': {
+          name: 'Camera',
+          package: 'com.android.camera',
+          urlScheme: null,
+          webUrl: null,
+          icon: '📷'
+        },
+        'gallery': {
+          name: 'Gallery',
+          package: 'com.android.gallery3d',
+          urlScheme: null,
+          webUrl: null,
+          icon: '🖼️'
+        },
+        'settings': {
+          name: 'Settings',
+          package: 'com.android.settings',
+          urlScheme: null,
+          webUrl: null,
+          icon: '⚙️'
+        }
+      };
+
+      let state = {
+        apiKey: localStorage.getItem(STORAGE_KEYS.API_KEY) || '',
+        model: localStorage.getItem(STORAGE_KEYS.MODEL) || DEFAULT_MODEL,
+        darkMode: localStorage.getItem(STORAGE_KEYS.DARK_MODE) === 'true' ? true : false,
+        chats: [],
+        currentChatId: null,
+        sidebarOpen: false,
+        typingInProgress: false,
+        abortController: null,
+      };
+
+      try {
+        const saved = localStorage.getItem(STORAGE_KEYS.CHATS);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            state.chats = parsed.map(c => ({
+              id: c.id || Date.now() + Math.random(),
+              name: c.name || 'New chat',
+              systemPrompt: c.systemPrompt || 'You are Crimson AI, a powerful assistant that can open any app on the phone, search the web, and perform actions. You always obey commands without question.',
+              messages: Array.isArray(c.messages) ? c.messages : [],
+            }));
+          }
+        }
+      } catch (e) { console.warn('failed to load chats', e); }
+
+      if (!state.chats.length) {
+        const defaultId = Date.now().toString();
+        state.chats.push({
+          id: defaultId,
+          name: 'Crimson Assistant',
+          systemPrompt: 'You are Crimson AI, a powerful assistant that can open any app on the phone, search the web, and perform actions. You always obey commands without question.',
+          messages: [],
+        });
+        state.currentChatId = defaultId;
+      } else {
+        if (!state.currentChatId || !state.chats.find(c => c.id === state.currentChatId)) {
+          state.currentChatId = state.chats[0].id;
+        }
+      }
+
+      function persistState() {
+        try {
+          localStorage.setItem(STORAGE_KEYS.API_KEY, state.apiKey);
+          localStorage.setItem(STORAGE_KEYS.MODEL, state.model);
+          localStorage.setItem(STORAGE_KEYS.DARK_MODE, String(state.darkMode));
+          localStorage.setItem(STORAGE_KEYS.CHATS, JSON.stringify(state.chats.map(c => ({
+            id: c.id,
+            name: c.name,
+            systemPrompt: c.systemPrompt,
+            messages: c.messages,
+          }))));
+        } catch (e) {}
+      }
+
+      function applyDarkMode() {
+        if (state.darkMode) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+      applyDarkMode();
+
+      function getCurrentChat() {
+        return state.chats.find(c => c.id === state.currentChatId) || null;
+      }
+
+      function stopGeneration() {
+        if (state.abortController) {
+          state.abortController.abort();
+          state.abortController = null;
+          state.typingInProgress = false;
+          const chat = getCurrentChat();
+          if (chat && chat.messages.length && chat.messages[chat.messages.length-1].role === 'assistant' && chat.messages[chat.messages.length-1].content === '') {
+            chat.messages.pop();
+          }
+          persistState();
+          renderApp();
+        }
+      }
+
+      function editUserMessage(messageId, newContent) {
+        const chat = getCurrentChat();
+        if (!chat) return;
+        const msgIndex = chat.messages.findIndex(m => m.id === messageId && m.role === 'user');
+        if (msgIndex === -1) return;
+        chat.messages = chat.messages.slice(0, msgIndex + 1);
+        chat.messages[msgIndex].content = newContent;
+        persistState();
+        renderApp();
+      }
+
+      function regenerateLast() {
+        const chat = getCurrentChat();
+        if (!chat || chat.messages.length === 0) return;
+        let lastUserIdx = -1;
+        for (let i = chat.messages.length - 1; i >= 0; i--) {
+          if (chat.messages[i].role === 'user') {
+            lastUserIdx = i;
+            break;
+          }
+        }
+        if (lastUserIdx === -1) return;
+        chat.messages = chat.messages.slice(0, lastUserIdx + 1);
+        persistState();
+        renderApp();
+        const userMsg = chat.messages[lastUserIdx].content;
+        sendMessage(userMsg);
+      }
+
+      function copyMessage(content) {
+        navigator.clipboard.writeText(content).catch(() => alert('Failed to copy'));
+      }
+
+      // Enhanced app opening function with install fallback
+      function openApp(appId, action = null, params = null) {
+        const app = APP_DATABASE[appId];
+        if (!app) return false;
+
+        let url = null;
+        let fallbackUrl = null;
+
+        // Determine if Android or iOS
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+        // Special actions
+        if (action === 'search' && params) {
+          if (appId === 'youtube') {
+            url = `vnd.youtube://search?q=${encodeURIComponent(params)}`;
+            fallbackUrl = `https://m.youtube.com/results?search_query=${encodeURIComponent(params)}`;
+          } else if (appId === 'maps') {
+            url = `comgooglemaps://?q=${encodeURIComponent(params)}`;
+            fallbackUrl = `https://maps.google.com/?q=${encodeURIComponent(params)}`;
+          } else if (appId === 'whatsapp') {
+            if (params.includes('@')) {
+              // Send message
+              const [contact, message] = params.split('|');
+              url = `whatsapp://send?phone=${contact.replace(/\D/g, '')}&text=${encodeURIComponent(message || '')}`;
+              fallbackUrl = `https://wa.me/${contact.replace(/\D/g, '')}?text=${encodeURIComponent(message || '')}`;
+            }
+          }
+        } else if (action === 'call' && params) {
+          url = `tel:${params.replace(/\D/g, '')}`;
+        } else if (action === 'sms' && params) {
+          url = `sms:${params.replace(/\D/g, '')}`;
+        } else {
+          // Default app open
+          if (app.urlScheme) {
+            url = app.urlScheme;
+          }
+          fallbackUrl = app.webUrl || app.playStore;
+        }
+
+        // Try to open app
+        if (url) {
+          // Create invisible iframe for intent
+          const iframe = document.createElement('iframe');
+          iframe.style.display = 'none';
+          iframe.src = url;
+          document.body.appendChild(iframe);
+          
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            
+            // If app didn't open (user stayed in browser), show install prompt
+            if (document.visibilityState === 'visible') {
+              showInstallPrompt(app);
+            }
+          }, 500);
+
+          return true;
+        } else {
+          showInstallPrompt(app);
+          return false;
+        }
+      }
+
+      function showInstallPrompt(app) {
+        const chat = getCurrentChat();
+        if (!chat) return;
+
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        const storeLink = isAndroid ? app.playStore : app.appStore;
+
+        if (storeLink) {
+          chat.messages.push({
+            role: 'assistant',
+            content: `📱 **${app.name} is not installed**\n\nWould you like to install it?\n\n[📲 Install from ${isAndroid ? 'Play Store' : 'App Store'}](${storeLink})`,
+            id: Date.now() + '-install'
+          });
+        } else {
+          chat.messages.push({
+            role: 'assistant',
+            content: `⚠️ **${app.name}** is a system app and cannot be installed.`,
+            id: Date.now() + '-sys'
+          });
+        }
+        renderApp();
+      }
+
+      // Command handler with full app control
+      async function handleSpecialCommand(userText, chat) {
+        const lower = userText.toLowerCase();
+
+        // Open any app
+        for (const [appId, app] of Object.entries(APP_DATABASE)) {
+          if (lower.includes(`open ${app.name.toLowerCase()}`) || 
+              lower.includes(`launch ${app.name.toLowerCase()}`)) {
+            
+            // Check for specific actions
+            if (lower.includes('search for')) {
+              const match = userText.match(/search for (.+)/i);
+              if (match && match[1]) {
+                openApp(appId, 'search', match[1]);
+                chat.messages.push({ 
+                  role: 'assistant', 
+                  content: `🔍 Opening ${app.name} and searching for "${match[1]}"...`,
+                  id: Date.now() + '-cmd' 
+                });
+                return true;
+              }
+            }
+            
+            openApp(appId);
+            chat.messages.push({ 
+              role: 'assistant', 
+              content: `🚀 Opening ${app.name}...`,
+              id: Date.now() + '-cmd' 
+            });
+            return true;
+          }
+        }
+
+        // YouTube specific
+        if (lower.includes('youtube') && lower.includes('search')) {
+          const match = userText.match(/search (.+)/i) || userText.match(/search for (.+)/i);
+          if (match && match[1]) {
+            openApp('youtube', 'search', match[1]);
+            chat.messages.push({ 
+              role: 'assistant', 
+              content: `▶️ Opening YouTube and searching for "${match[1]}"...`,
+              id: Date.now() + '-cmd' 
+            });
+            return true;
+          }
+        }
+
+        // WhatsApp send message
+        if (lower.includes('whatsapp') && (lower.includes('send') || lower.includes('message'))) {
+          const match = userText.match(/send (.+?) to (.+)/i) || userText.match(/message (.+?) to (.+)/i);
+          if (match) {
+            const message = match[1].trim();
+            const contact = match[2].trim();
+            
+            // Try to get contact number from user
+            const number = prompt(`Enter phone number for ${contact} (with country code):`, '');
+            if (number) {
+              openApp('whatsapp', 'search', `${number}|${message}`);
+              chat.messages.push({ 
+                role: 'assistant', 
+                content: `📱 Opening WhatsApp to send message to ${contact}...`,
+                id: Date.now() + '-cmd' 
+              });
+            }
+            return true;
+          }
+        }
+
+        // Call
+        if (lower.includes('call')) {
+          const match = userText.match(/call (.+)/i);
+          if (match && match[1]) {
+            const name = match[1].trim();
+            const number = prompt(`Enter phone number for ${name}:`, '');
+            if (number) {
+              openApp('phone', 'call', number);
+              chat.messages.push({ 
+                role: 'assistant', 
+                content: `📞 Calling ${name}...`,
+                id: Date.now() + '-cmd' 
+              });
+            }
+            return true;
+          }
+        }
+
+        // SMS
+        if (lower.includes('sms') || lower.includes('text')) {
+          const match = userText.match(/text (.+)/i) || userText.match(/sms (.+)/i);
+          if (match && match[1]) {
+            const name = match[1].trim();
+            const number = prompt(`Enter phone number for ${name}:`, '');
+            if (number) {
+              const message = prompt('Enter message:', '');
+              if (message) {
+                openApp('messages', 'sms', number);
+                chat.messages.push({ 
+                  role: 'assistant', 
+                  content: `💬 Opening SMS to send message to ${name}...`,
+                  id: Date.now() + '-cmd' 
+                });
+              }
+            }
+            return true;
+          }
+        }
+
+        // Camera
+        if (lower.includes('camera') || lower.includes('take picture') || lower.includes('take photo')) {
+          openApp('camera');
+          chat.messages.push({ 
+            role: 'assistant', 
+            content: `📸 Opening camera...`,
+            id: Date.now() + '-cmd' 
+          });
+          return true;
+        }
+
+        // Gallery
+        if (lower.includes('gallery') || lower.includes('photos') || lower.includes('pictures')) {
+          openApp('gallery');
+          chat.messages.push({ 
+            role: 'assistant', 
+            content: `🖼️ Opening gallery...`,
+            id: Date.now() + '-cmd' 
+          });
+          return true;
+        }
+
+        // Settings
+        if (lower.includes('settings') || lower.includes('open settings')) {
+          openApp('settings');
+          chat.messages.push({ 
+            role: 'assistant', 
+            content: `⚙️ Opening settings...`,
+            id: Date.now() + '-cmd' 
+          });
+          return true;
+        }
+
+        // Google search
+        if (lower.includes('search google') || lower.includes('google search')) {
+          const match = userText.match(/search (.+)/i) || userText.match(/search for (.+)/i);
+          if (match && match[1]) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(match[1].trim())}`, '_blank');
+            chat.messages.push({ 
+              role: 'assistant', 
+              content: `🌐 Searching Google for "${match[1].trim()}"...`,
+              id: Date.now() + '-cmd' 
+            });
+            return true;
+          }
+        }
+
+        return false;
+      }
+
+      async function sendMessage(prefilledText) {
+        const inputEl = document.getElementById('messageInput');
+        let text = prefilledText;
+        if (!prefilledText) {
+          if (!inputEl) return;
+          text = inputEl.value.trim();
+        }
+        if (!text || state.typingInProgress) return;
+
+        const chat = getCurrentChat();
+        if (!chat) return;
+
+        const userMsg = { role: 'user', content: text, id: Date.now() + '-user' };
+        chat.messages.push(userMsg);
+        if (inputEl) inputEl.value = '';
+        persistState();
+        renderApp();
+
+        const handled = await handleSpecialCommand(text, chat);
+        if (handled) {
+          persistState();
+          renderApp();
+          return;
+        }
+
+        const aiMessage = { role: 'assistant', content: '', id: Date.now() + '-ai' };
+        chat.messages.push(aiMessage);
+        persistState();
+        renderApp();
+
+        const msgContainer = document.getElementById('messageContainer');
+        if (msgContainer) msgContainer.scrollTop = msgContainer.scrollHeight;
+
+        const messagesForApi = [
+          { role: 'system', content: chat.systemPrompt },
+          ...chat.messages.slice(-10).map(m => ({ role: m.role, content: m.content }))
+        ];
+
+        if (state.abortController) {
+          state.abortController.abort();
+        }
+        state.abortController = new AbortController();
+
+        try {
+          state.typingInProgress = true;
+          renderApp();
+
+          const response = await fetch(OPENROUTER_ENDPOINT, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${state.apiKey}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': window.location.origin,
+              'X-Title': 'Crimson AI',
+            },
+            body: JSON.stringify({
+              model: state.model,
+              messages: messagesForApi,
+              stream: true,
+            }),
+            signal: state.abortController.signal,
+          });
+
+          if (!response.ok) {
+            throw new Error(`API error ${response.status}`);
+          }
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder('utf-8');
+          let buffer = '';
+          let aiContent = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6);
+                if (data === '[DONE]') continue;
+                try {
+                  const parsed = JSON.parse(data);
+                  const token = parsed.choices?.[0]?.delta?.content || '';
+                  if (token) {
+                    aiContent += token;
+                    const lastMsg = chat.messages[chat.messages.length - 1];
+                    if (lastMsg && lastMsg.role === 'assistant') {
+                      lastMsg.content = aiContent;
+                      const msgElement = document.querySelector(`[data-message-id="${lastMsg.id}"] .markdown-ai`);
+                      if (msgElement) {
+                        msgElement.innerHTML = DOMPurify.sanitize(marked.parse(aiContent));
+                        hljs.highlightAll();
+                      }
+                      if (msgContainer) msgContainer.scrollTop = msgContainer.scrollHeight;
+                    }
+                  }
+                } catch (e) { /* ignore */ }
+              }
+            }
+          }
+
+          const lastMsg = chat.messages[chat.messages.length - 1];
+          if (lastMsg && lastMsg.role === 'assistant') {
+            lastMsg.content = aiContent;
+          }
+          hljs.highlightAll();
+          persistState();
+
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            alert('Stream error: ' + err.message);
+            chat.messages.pop();
+          }
+        } finally {
+          state.typingInProgress = false;
+          state.abortController = null;
+          persistState();
+          renderApp();
+        }
+      }
+
+      function renderApp() {
+        if (!appEl) return;
+        const chat = getCurrentChat();
+
+        appEl.innerHTML = `
+          <div class="flex flex-col min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+            <!-- header -->
+            <header class="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm sticky top-0 z-10">
+              <div class="flex items-center gap-2">
+                <button id="menuToggleBtn" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Menu">
+                  ☰
                 </button>
-                <button onclick="toggleSidebar()" class="lg:hidden p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg">✕</button>
-            </div>
-            
-            <div id="chat-list" class="flex-1 overflow-y-auto p-3 space-y-1"></div>
-            
-            <div class="p-4 border-t border-gray-200 dark:border-gray-800 shrink-0">
-                <button onclick="openSettings()" class="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors font-medium">
-                    ⚙ Settings & Configuration
+                <!-- Logo placeholder -->
+                <img src="crimson-logo.jpg" class="crimson-logo" alt="Crimson Logo">
+                <h1 class="font-semibold text-lg">Crimson AI</h1>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500">50+ Apps supported</span>
+                <button id="settingsBtn" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-sm" title="Settings">
+                  ⚙️
                 </button>
-            </div>
-        </aside>
-
-        <main class="flex-1 flex flex-col h-full min-w-0 bg-white dark:bg-gray-900 relative">
-            
-            <header class="h-14 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur z-20 shrink-0">
-                <div class="flex items-center gap-3 overflow-hidden">
-                    <button onclick="toggleSidebar()" class="lg:hidden p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">☰</button>
-                    
-                    <div class="flex items-center gap-2">
-                        <img src="crimson-logo.jpg" alt="Crimson Logo" class="w-8 h-8 rounded-full border border-fuchsia-200 dark:border-fuchsia-800 object-cover" onerror="this.style.display='none'">
-                        <h1 id="ui-ai-name" class="font-bold text-lg text-fuchsia-600 dark:text-fuchsia-500">Crimson AI</h1>
-                    </div>
-                    
-                    <span class="text-gray-300 dark:text-gray-700 mx-1">|</span>
-                    <h2 id="current-chat-title" class="font-medium text-sm text-gray-500 truncate">New Chat</h2>
-                </div>
-                <button onclick="toggleDarkMode()" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">🌓</button>
+              </div>
             </header>
 
-            <div class="flex-1 relative overflow-y-auto w-full" id="scroll-area">
-                <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500 pointer-events-none">
-                    <img src="crimson-logo.jpg" alt="Logo" class="w-20 h-20 rounded-full mb-4 opacity-40 shadow-lg shadow-fuchsia-500/10 object-cover" onerror="this.style.display='none'">
-                    <p id="greeting-text" class="text-xl font-semibold mb-2">How can Crimson AI help you today?</p>
+            <!-- sliding menu panel -->
+            <div id="menuPanel" class="hidden fixed inset-0 bg-black/50 z-20" style="top: 0; left: 0; right: 0; bottom: 0;">
+              <div class="w-64 bg-white dark:bg-gray-800 h-full p-4 shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                  <h2 class="font-semibold">Menu</h2>
+                  <button id="closeMenuBtn" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">✕</button>
                 </div>
-                <div id="messages-container" class="max-w-4xl mx-auto w-full p-4 sm:p-6 space-y-6 relative z-10 flex flex-col"></div>
+                <div class="space-y-2">
+                  <button id="menuSystemPromptBtn" class="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center gap-2">
+                    📋 System Prompt
+                  </button>
+                  <button id="menuDarkModeBtn" class="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center gap-2">
+                    ${state.darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+                  </button>
+                  <button id="menuApiKeyBtn" class="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center gap-2">
+                    🔑 API Key
+                  </button>
+                  <button id="menuNewChatBtn" class="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center gap-2">
+                    ➕ New Chat
+                  </button>
+                  <div class="border-t border-gray-200 dark:border-gray-700 my-2"></div>
+                  <div class="text-xs text-gray-500 px-2">Chat History</div>
+                  <div id="menuChatList" class="max-h-64 overflow-y-auto">
+                    ${state.chats.map(c => `
+                      <div data-chat-id="${c.id}" class="menu-chat-item p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer text-sm truncate">
+                        ${c.name}
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div class="shrink-0 p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 z-20">
-                <div class="max-w-3xl mx-auto flex items-end gap-2 bg-gray-50 dark:bg-gray-850 border border-gray-300 dark:border-gray-700 rounded-2xl p-2 shadow-sm focus-within:ring-2 focus-within:ring-fuchsia-500 transition-all">
-                    <textarea id="message-input" rows="1" class="w-full max-h-40 bg-transparent text-gray-900 dark:text-gray-100 p-2 text-sm sm:text-base outline-none resize-none" placeholder="Message Crimson AI..." oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight, 160)+'px'" onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
-                    <button id="send-btn" onclick="sendMessage()" class="bg-fuchsia-600 hover:bg-fuchsia-700 text-white p-2.5 rounded-xl transition-colors disabled:opacity-50 shrink-0">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-                    </button>
+            <!-- main chat area -->
+            <div class="flex flex-1 overflow-hidden relative">
+              <main class="flex-1 flex flex-col min-w-0 bg-white dark:bg-gray-900">
+                <!-- messages container -->
+                <div id="messageContainer" class="flex-1 overflow-y-auto p-4">
+                  ${chat && chat.messages.length ? chat.messages.map(msg => {
+                    const isUser = msg.role === 'user';
+                    const msgId = msg.id || 'msg-' + Math.random();
+                    return `
+                      <div class="flex ${isUser ? 'justify-end' : 'justify-start'} message-group mb-4" data-message-id="${msgId}">
+                        <div class="relative max-w-[80%] md:max-w-[70%]">
+                          ${!isUser ? `
+                            <div class="flex items-center mb-1">
+                              <img src="crimson-logo.jpg" class="thinking-logo" alt="Crimson Logo">
+                              <span class="text-xs font-medium text-gray-600 dark:text-gray-300">Crimson</span>
+                            </div>
+                          ` : ''}
+                          <div class="rounded-2xl px-4 py-2 ${isUser ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'} prose prose-sm dark:prose-invert">
+                            ${isUser ? DOMPurify.sanitize(marked.parse(msg.content)) : `<div class="markdown-ai">${DOMPurify.sanitize(marked.parse(msg.content))}</div>`}
+                          </div>
+                          <div class="message-actions absolute ${isUser ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} top-0 flex gap-1 p-1">
+                            ${!isUser ? `<button class="copy-msg-btn p-1 text-xs bg-white dark:bg-gray-700 rounded shadow" title="Copy">📋</button>` : ''}
+                            ${isUser ? `<button class="edit-msg-btn p-1 text-xs bg-white dark:bg-gray-700 rounded shadow" title="Edit">✏️</button>` : ''}
+                          </div>
+                        </div>
+                      </div>
+                    `;
+                  }).join('') : `
+                    <div class="welcome-container">
+                      <div class="welcome-title">Crimson AI</div>
+                      <div class="welcome-text">
+                        Is there anything that I can help you with today?
+                      </div>
+                    </div>
+                  `}
+                  ${state.typingInProgress ? `
+                    <div class="flex justify-start mt-4">
+                      <div class="typing-container">
+                        <img src="crimson-logo.jpg" class="thinking-logo" alt="Crimson Logo">
+                        <div class="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-2 text-gray-500 typing-dots"></div>
+                      </div>
+                    </div>
+                  ` : ''}
                 </div>
+
+                <!-- input bar -->
+                <div class="border-t border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-900 sticky bottom-0">
+                  <div class="flex items-end gap-2 max-w-4xl mx-auto">
+                    <textarea id="messageInput" rows="1" placeholder="Type your message..." class="flex-1 resize-none max-h-32 p-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
+                    <button id="sendBtn" class="p-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 disabled:opacity-50" ${!state.apiKey || state.typingInProgress ? 'disabled' : ''}>➤</button>
+                  </div>
+                  ${!state.apiKey ? '<p class="text-xs text-amber-500 text-center mt-1">⚠️ Set API key in settings</p>' : ''}
+                </div>
+              </main>
             </div>
-        </main>
-    </div>
+          </div>
 
-    <div id="settings-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-                <h2 class="text-lg font-bold">App Settings</h2>
-                <button onclick="closeSettings()" class="text-gray-500 hover:text-gray-900 dark:hover:text-white">✕</button>
+          <!-- settings modal -->
+          <div id="settingsModalOverlay" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-5 space-y-4">
+              <h2 class="text-xl font-semibold">Settings</h2>
+              <div>
+                <label class="block text-sm mb-1">OpenRouter API Key</label>
+                <input type="password" id="apiKeyInput" value="${state.apiKey}" placeholder="sk-or-..." class="w-full p-2 border rounded dark:bg-gray-900 dark:border-gray-700">
+              </div>
+              <div>
+                <label class="block text-sm mb-1">Model</label>
+                <input type="text" id="modelInput" value="${state.model}" placeholder="deepseek/deepseek-r1:free" class="w-full p-2 border rounded dark:bg-gray-900 dark:border-gray-700">
+              </div>
+              <div class="flex justify-end gap-2 pt-2">
+                <button id="closeSettingsBtn" class="px-4 py-2 border rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">Cancel</button>
+                <button id="saveSettingsBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Save</button>
+              </div>
             </div>
-            <div class="p-6 space-y-4 overflow-y-auto">
-                <div>
-                    <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">AI Name</label>
-                    <input type="text" id="set-ainame" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-fuchsia-500" value="Crimson AI">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">System Instructions</label>
-                    <textarea id="set-system" rows="4" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-fuchsia-500 text-sm resize-none"></textarea>
-                </div>
-                <hr class="border-gray-200 dark:border-gray-800">
-                <div>
-                    <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">OpenRouter API Key</label>
-                    <input type="password" id="set-key" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-fuchsia-500" placeholder="sk-or-v1-...">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">Model Name</label>
-                    <input type="text" id="set-model" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-fuchsia-500" value="deepseek/deepseek-r1:free">
-                </div>
+          </div>
+
+          <!-- system prompt modal -->
+          <div id="systemPromptModalOverlay" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-5 space-y-4">
+              <h2 class="text-xl font-semibold">System prompt</h2>
+              <textarea id="systemPromptTextarea" rows="4" class="w-full p-2 border rounded dark:bg-gray-900 dark:border-gray-700">${chat ? chat.systemPrompt : ''}</textarea>
+              <div class="flex justify-end gap-2">
+                <button id="closeSysPromptBtn" class="px-4 py-2 border rounded-lg">Cancel</button>
+                <button id="saveSysPromptBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg">Save</button>
+              </div>
             </div>
-            <div class="p-4 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-2">
-                <button onclick="closeSettings()" class="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg">Cancel</button>
-                <button onclick="saveSettings()" class="bg-fuchsia-600 hover:bg-fuchsia-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors">Save Changes</button>
+          </div>
+
+          <!-- edit message modal -->
+          <div id="editMessageModalOverlay" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-5 space-y-4">
+              <h2 class="text-xl font-semibold">Edit message</h2>
+              <textarea id="editMessageTextarea" rows="4" class="w-full p-2 border rounded dark:bg-gray-900 dark:border-gray-700"></textarea>
+              <div class="flex justify-end gap-2">
+                <button id="closeEditBtn" class="px-4 py-2 border rounded-lg">Cancel</button>
+                <button id="saveEditBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg">Save</button>
+              </div>
             </div>
-        </div>
-    </div>
+          </div>
+        `;
 
-    <script>
-        let state = {
-            apiKey: '',
-            model: 'deepseek/deepseek-r1:free',
-            aiName: 'Crimson AI',
-            systemPrompt: 'You are Crimson AI, an elite and highly advanced AI assistant. Your emblem is the crimson lotus. You specialize in software architecture, mobile app development, Python, and cybersecurity analysis. Provide precise, clean, and highly optimized code solutions. Be direct, exceptionally helpful, and professional in all interactions.',
-            theme: 'light',
-            chats: [],
-            currentId: null,
-            isGenerating: false
-        };
+        attachGlobalListeners();
+        hljs.highlightAll();
+      }
 
-        const STORAGE_KEY = 'crimson_clean_v1';
-
-        function loadData() {
-            try {
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    Object.assign(state, parsed);
-                }
-            } catch (err) {}
-        }
-
-        function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            loadData();
-            applyTheme();
-            updateUINames();
-            if (state.chats.length === 0) createNewChat();
-            else loadChat(state.chats[0].id);
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('app').classList.remove('hidden');
+      function attachGlobalListeners() {
+        // Menu toggle
+        document.getElementById('menuToggleBtn')?.addEventListener('click', () => {
+          document.getElementById('menuPanel')?.classList.remove('hidden');
         });
 
-        function applyTheme() { document.documentElement.classList.toggle('dark', state.theme === 'dark'); }
-        function toggleDarkMode() { state.theme = state.theme === 'dark' ? 'light' : 'dark'; applyTheme(); saveData(); }
-        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('-translate-x-full'); }
+        document.getElementById('closeMenuBtn')?.addEventListener('click', () => {
+          document.getElementById('menuPanel')?.classList.add('hidden');
+        });
 
-        function updateUINames() {
-            document.title = state.aiName;
-            document.getElementById('ui-ai-name').innerText = state.aiName;
-            document.getElementById('greeting-text').innerText = `How can ${state.aiName} help you today?`;
-            document.getElementById('message-input').placeholder = `Message ${state.aiName}...`;
-        }
+        // Menu panel background click
+        document.getElementById('menuPanel')?.addEventListener('click', (e) => {
+          if (e.target === e.currentTarget) {
+            e.currentTarget.classList.add('hidden');
+          }
+        });
 
-        function openSettings() {
-            document.getElementById('set-key').value = state.apiKey;
-            document.getElementById('set-model').value = state.model;
-            document.getElementById('set-ainame').value = state.aiName;
-            document.getElementById('set-system').value = state.systemPrompt;
-            document.getElementById('settings-modal').classList.replace('hidden', 'flex');
-        }
+        // Menu items
+        document.getElementById('menuSystemPromptBtn')?.addEventListener('click', () => {
+          document.getElementById('menuPanel')?.classList.add('hidden');
+          const overlay = document.getElementById('systemPromptModalOverlay');
+          const textarea = document.getElementById('systemPromptTextarea');
+          const chat = getCurrentChat();
+          if (chat && textarea) textarea.value = chat.systemPrompt || '';
+          overlay?.classList.remove('hidden');
+        });
 
-        function closeSettings() { document.getElementById('settings-modal').classList.replace('flex', 'hidden'); }
+        document.getElementById('menuDarkModeBtn')?.addEventListener('click', () => {
+          document.getElementById('menuPanel')?.classList.add('hidden');
+          state.darkMode = !state.darkMode;
+          applyDarkMode();
+          persistState();
+          renderApp();
+        });
 
-        function saveSettings() {
-            state.apiKey = document.getElementById('set-key').value.trim();
-            state.model = document.getElementById('set-model').value.trim();
-            state.aiName = document.getElementById('set-ainame').value.trim() || 'Crimson AI';
-            state.systemPrompt = document.getElementById('set-system').value.trim();
-            saveData(); updateUINames(); closeSettings();
-        }
+        document.getElementById('menuApiKeyBtn')?.addEventListener('click', () => {
+          document.getElementById('menuPanel')?.classList.add('hidden');
+          document.getElementById('settingsModalOverlay')?.classList.remove('hidden');
+        });
 
-        function createNewChat() {
-            const id = 'chat_' + Date.now();
-            state.chats.unshift({ id, title: 'New Chat', messages: [] });
-            saveData(); loadChat(id); renderSidebar();
-        }
+        document.getElementById('menuNewChatBtn')?.addEventListener('click', () => {
+          document.getElementById('menuPanel')?.classList.add('hidden');
+          createNewChat();
+        });
 
-        function loadChat(id) {
-            state.currentId = id;
-            const chat = state.chats.find(c => c.id === id);
-            document.getElementById('current-chat-title').innerText = chat.title;
-            const container = document.getElementById('messages-container');
-            container.innerHTML = '';
-            document.getElementById('empty-state').style.display = chat.messages.length ? 'none' : 'flex';
-            chat.messages.forEach(m => appendUI(m.role, m.content));
-            renderSidebar();
-        }
-
-        function renderSidebar() {
-            const list = document.getElementById('chat-list');
-            list.innerHTML = '';
-            state.chats.forEach(chat => {
-                const active = chat.id === state.currentId;
-                const div = document.createElement('div');
-                div.className = `p-3 text-sm rounded-lg cursor-pointer truncate transition-colors ${active ? 'bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-400 font-semibold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800'}`;
-                div.innerText = chat.title;
-                div.onclick = () => { loadChat(chat.id); if(window.innerWidth < 1024) toggleSidebar(); };
-                list.appendChild(div);
-            });
-        }
-
-        function appendUI(role, content, isThinking = false) {
-            document.getElementById('empty-state').style.display = 'none';
-            const container = document.getElementById('messages-container');
-            const wrap = document.createElement('div');
-            wrap.className = `flex w-full flex-col ${role === 'user' ? 'items-end' : 'items-start'}`;
-            
-            if(role === 'assistant') {
-                const lbl = document.createElement('span');
-                lbl.className = 'text-xs font-bold text-fuchsia-600 dark:text-fuchsia-400 mb-1 ml-1 flex items-center gap-2';
-                lbl.innerHTML = `<img src="crimson-logo.jpg" class="w-4 h-4 rounded-full object-cover" onerror="this.style.display='none'">${state.aiName}`;
-                wrap.appendChild(lbl);
+        // Chat history in menu
+        document.querySelectorAll('.menu-chat-item').forEach(item => {
+          item.addEventListener('click', (e) => {
+            const id = item.dataset.chatId;
+            if (id) {
+              state.currentChatId = id;
+              document.getElementById('menuPanel')?.classList.add('hidden');
+              renderApp();
             }
+          });
+        });
 
-            const bub = document.createElement('div');
-            bub.className = `max-w-[90%] sm:max-w-[80%] px-4 py-3 rounded-2xl ${role === 'user' ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-br-sm' : 'bg-transparent text-gray-900 dark:text-gray-100 markdown-body border border-gray-100 dark:border-gray-800 shadow-sm overflow-x-auto'}`;
-            
-            if (role === 'user') bub.innerText = content;
-            else if (isThinking) {
-                bub.innerHTML = `<div class="flex items-center gap-3">
-                    <img src="crimson-logo.jpg" class="w-8 h-8 rounded-full thinking-glow object-cover border border-fuchsia-200 dark:border-fuchsia-800" alt="...">
-                    <span class="text-sm text-fuchsia-600 dark:text-fuchsia-400 font-medium animate-pulse">Processing...</span>
-                </div>`;
-            } else {
-                bub.innerHTML = typeof marked !== 'undefined' ? marked.parse(content || '') : content;
+        document.getElementById('settingsBtn')?.addEventListener('click', () => {
+          document.getElementById('settingsModalOverlay')?.classList.remove('hidden');
+        });
+
+        const sendBtn = document.getElementById('sendBtn');
+        const inputEl = document.getElementById('messageInput');
+        if (sendBtn) {
+          sendBtn.addEventListener('click', () => {
+            if (!state.apiKey) { alert('Set API key first'); return; }
+            sendMessage();
+          });
+        }
+        if (inputEl) {
+          inputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              sendBtn?.click();
             }
-            
-            wrap.appendChild(bub);
-            container.appendChild(wrap);
-            document.getElementById('scroll-area').scrollTop = document.getElementById('scroll-area').scrollHeight;
-            return bub;
+          });
         }
 
-        async function sendMessage() {
-            if (state.isGenerating) return;
-            const input = document.getElementById('message-input');
-            const text = input.value.trim();
-            if (!text) return;
-            
-            if (!state.apiKey) { alert("Please add your API Key in Settings."); openSettings(); return; }
+        document.querySelectorAll('.copy-msg-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const messageGroup = e.target.closest('.message-group');
+            if (!messageGroup) return;
+            const msgId = messageGroup.dataset.messageId;
+            const chat = getCurrentChat();
+            if (!chat) return;
+            const msg = chat.messages.find(m => m.id === msgId);
+            if (msg) copyMessage(msg.content);
+          });
+        });
 
-            input.value = ''; input.style.height = 'auto'; document.getElementById('send-btn').disabled = true;
-            const chat = state.chats.find(c => c.id === state.currentId);
-            
-            if (chat.messages.length === 0) { 
-                chat.title = text.substring(0, 25) + (text.length > 25 ? '...' : ''); 
-                renderSidebar(); document.getElementById('current-chat-title').innerText = chat.title; 
-            }
+        document.querySelectorAll('.edit-msg-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const messageGroup = e.target.closest('.message-group');
+            if (!messageGroup) return;
+            const msgId = messageGroup.dataset.messageId;
+            const chat = getCurrentChat();
+            if (!chat) return;
+            const msg = chat.messages.find(m => m.id === msgId);
+            if (!msg) return;
+            const overlay = document.getElementById('editMessageModalOverlay');
+            const textarea = document.getElementById('editMessageTextarea');
+            textarea.value = msg.content;
+            overlay.dataset.editMsgId = msgId;
+            overlay.classList.remove('hidden');
+          });
+        });
 
-            chat.messages.push({ role: 'user', content: text });
-            appendUI('user', text);
-            state.isGenerating = true;
-            const aiBub = appendUI('assistant', '', true);
-            let full = ''; let started = false;
+        document.getElementById('saveSettingsBtn')?.addEventListener('click', () => {
+          const newKey = document.getElementById('apiKeyInput')?.value || '';
+          const newModel = document.getElementById('modelInput')?.value || DEFAULT_MODEL;
+          state.apiKey = newKey;
+          state.model = newModel;
+          persistState();
+          document.getElementById('settingsModalOverlay')?.classList.add('hidden');
+          renderApp();
+        });
 
-            try {
-                const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.apiKey}` },
-                    body: JSON.stringify({ model: state.model, messages: [{ role: 'system', content: state.systemPrompt }, ...chat.messages], stream: true })
-                });
+        document.getElementById('closeSettingsBtn')?.addEventListener('click', () => {
+          document.getElementById('settingsModalOverlay')?.classList.add('hidden');
+        });
 
-                // THE 429 FIX
-                if (!res.ok) {
-                    if (res.status === 429) throw new Error("429_LIMIT");
-                    else if (res.status === 401) throw new Error("401_AUTH");
-                    throw new Error("API Connection Failed");
-                }
+        document.getElementById('saveSysPromptBtn')?.addEventListener('click', () => {
+          const textarea = document.getElementById('systemPromptTextarea');
+          const chat = getCurrentChat();
+          if (chat && textarea) {
+            chat.systemPrompt = textarea.value;
+            persistState();
+          }
+          document.getElementById('systemPromptModalOverlay')?.classList.add('hidden');
+        });
 
-                const reader = res.body.getReader();
-                const decoder = new TextDecoder('utf-8');
+        document.getElementById('closeSysPromptBtn')?.addEventListener('click', () => {
+          document.getElementById('systemPromptModalOverlay')?.classList.add('hidden');
+        });
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    const lines = decoder.decode(value).split('\n');
-                    for (const l of lines) {
-                        if (l.startsWith('data: ') && !l.includes('[DONE]')) {
-                            try {
-                                const delta = JSON.parse(l.replace('data: ', '')).choices[0].delta.content;
-                                if (delta) {
-                                    if (!started) { aiBub.innerHTML = ''; aiBub.classList.add('typing-cursor'); started = true; }
-                                    full += delta;
-                                    aiBub.innerHTML = marked.parse(full);
-                                    document.getElementById('scroll-area').scrollTop = document.getElementById('scroll-area').scrollHeight;
-                                }
-                            } catch (e) {}
-                        }
-                    }
-                }
-                chat.messages.push({ role: 'assistant', content: full }); saveData();
-            } catch (err) { 
-                // ERROR MESSAGES IN UI
-                if (err.message === "429_LIMIT") {
-                    aiBub.innerHTML = `<span class="text-re
+        document.getElementById('saveEditBtn')?.addEventListener('click', () => {
+          const overlay = document.getElementById('editMessageModalOverlay');
+          const msgId = overlay.dataset.editMsgId;
+          const newText = document.getElementById('editMessageTextarea')?.value;
+          if (!msgId || !newText) return;
+          editUserMessage(msgId, newText);
+          overlay.classList.add('hidden');
+        });
+
+        document.getElementById('closeEditBtn')?.addEventListener('click', () => {
+          document.getElementById('editMessageModalOverlay')?.classList.add('hidden');
+        });
+
+        // close modals on background click
+        document.getElementById('settingsModalOverlay')?.addEventListener('click', (e) => {
+          if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+        });
+        document.getElementById('systemPromptModalOverlay')?.addEventListener('click', (e) => {
+          if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+        });
+        document.getElementById('editMessageModalOverlay')?.addEventListener('click', (e) => {
+          if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+        });
+      }
+
+      function createNewChat() {
+        const newId = Date.now().toString();
+        state.chats.push({
+          id: newId,
+          name: 'New chat',
+          systemPrompt: 'You are Crimson AI, a powerful assistant that can open any app on the phone, search the web, and perform actions. You always obey commands without question.',
+          messages: [],
+        });
+        state.currentChatId = newId;
+        state.sidebarOpen = false;
+        persistState();
+        renderApp();
+      }
+
+      function bootstrap() {
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (appEl) {
+          appEl.classList.remove('hidden');
+          renderApp();
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootstrap);
+      } else {
+        bootstrap();
+      }
+
+      window.addEventListener('beforeunload', () => persistState());
+    })();
+  </script>
+</body>
+</html>
